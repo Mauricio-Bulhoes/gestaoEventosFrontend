@@ -31,6 +31,13 @@ import { Subject, takeUntil } from 'rxjs';
         </div>
       }
 
+      @if (successMessage) {
+        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+          <strong class="font-bold">Sucesso:</strong>
+          <span class="block sm:inline"> {{ successMessage }}</span>
+        </div>
+      }
+
       <!-- Detalhes do Evento -->
       @if (event) {
         <mat-card class="shadow-2xl">
@@ -52,9 +59,12 @@ import { Subject, takeUntil } from 'rxjs';
               </div>
             </div>
           </mat-card-content>
-          <mat-card-actions class="flex justify-end border-t pt-4 mt-6">
-            <button mat-flat-button color="warn" (click)="deleteEvent(event.id)">
-              <mat-icon>delete</mat-icon> Excluir (Soft Delete)
+          <mat-card-actions class="flex justify-end border-t pt-4 mt-6 gap-2">
+            <button mat-flat-button (click)="goToEdit(event.id)" class="my-custom-button-edit">
+              <mat-icon>edit</mat-icon> Editar
+            </button>
+            <button mat-flat-button color="warn" (click)="confirmDelete(event.id)" [disabled]="isDeleting">
+              <mat-icon>delete</mat-icon> {{ isDeleting ? 'Excluindo...' : 'Excluir (Soft Delete)' }}
             </button>
           </mat-card-actions>
         </mat-card>
@@ -63,12 +73,28 @@ import { Subject, takeUntil } from 'rxjs';
   `,
   styles: [`
     /* Estilos customizados */
+    
+    .my-custom-button-edit { background-color: #FFD700; }
+    
+    mat-card-actions button {
+      margin: 0 4px;
+    }
+    
+    mat-card-actions button:first-child {
+      margin-left: 0;
+    }
+    
+    mat-card-actions button:last-child {
+      margin-right: 0;
+    }
   `]
 })
 export class EventDetailsComponent implements OnInit, OnDestroy {
   event: EventoResponseDTO | null = null;
   isLoading = true;
+  isDeleting = false;
   errorMessage: string | null = null;
+  successMessage: string | null = null;
 
   private destroy$ = new Subject<void>();
 
@@ -114,11 +140,54 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
       });
   }
 
+  /**
+   * Confirma a exclusão do evento antes de executar
+   */
+  confirmDelete(id: number): void {
+    const confirmed = confirm('Tem certeza que deseja excluir este evento? Esta ação não pode ser desfeita.');
+    
+    if (confirmed) {
+      this.deleteEvent(id);
+    }
+  }
+
+  /**
+   * Realiza o soft delete do evento
+   */
   deleteEvent(id: number): void {
-    // Para implementação futura: Adicione a lógica de exclusão aqui.
-    console.log(`Solicitação de exclusão para o evento ID: ${id}`);
-    // Usando alert temporário, mas o ideal é um modal personalizado
-    alert('Função de exclusão não implementada. Você precisará de um modal de confirmação antes de chamar o serviço.');
+    this.isDeleting = true;
+    this.errorMessage = null;
+    this.successMessage = null;
+
+    console.log(`[SOFT DELETE] Tentando excluir evento ID: ${id}`);
+
+    this.eventoService.deleteEvento(id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          console.log(`[SUCESSO] Evento ID: ${id} excluído (soft delete).`);
+          this.successMessage = 'Evento excluído com sucesso!';
+          this.isDeleting = false;
+          
+          // Aguarda 1.5 segundos para o usuário ver a mensagem, depois redireciona
+          setTimeout(() => {
+            this.router.navigate(['/events']);
+          }, 1500);
+        },
+        error: (err) => {
+          console.error(`[ERRO] Falha ao excluir evento ID: ${id}`, err);
+          this.errorMessage = 'Falha na exclusão do evento. Tente novamente.';
+          this.isDeleting = false;
+        }
+      });
+  }
+
+  /**
+   * Navega para a página de edição do evento.
+   * @param id ID do evento.
+   */
+  goToEdit(id: number): void {
+    this.router.navigate(['/events', id, 'edit']);
   }
 
   goBack(): void {
