@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
@@ -61,11 +61,11 @@ import { EventoResponseDTO, EventoPage } from '../../models/evento.model';
             </div>
           </mat-card-content>
           
-          <mat-card-actions class="flex justify-between items-center p-4 bg-gray-50 border-t">
-            <button mat-flat-button (click)="goToEdit(event.id)" class="my-custom-button-edit mr-2">
+          <mat-card-actions class="flex justify-between items-center p-4 bg-gray-50 border-t gap-2">
+            <button mat-flat-button (click)="goToEdit(event.id)" class="my-custom-button-edit">
               <mat-icon>edit</mat-icon> Editar
             </button>
-            <button mat-flat-button color="primary" (click)="goToDetails(event.id)" class="mr-2">
+            <button mat-flat-button color="primary" (click)="goToDetails(event.id)">
               <mat-icon>info</mat-icon> Ver Detalhes
             </button>
             <button mat-flat-button color="warn" (click)="deleteEvent(event.id)">
@@ -76,7 +76,7 @@ import { EventoResponseDTO, EventoPage } from '../../models/evento.model';
       </div>
 
       <!-- Mensagem de Sem Eventos -->
-      <div *ngIf="!isLoading && events.length === 0" class="text-center py-16 bg-white rounded-lg shadow-inner">
+      <div *ngIf="!isLoading && events.length === 0 && !errorMessage" class="text-center py-16 bg-white rounded-lg shadow-inner">
         <mat-icon class="text-6xl text-gray-400">event_busy</mat-icon>
         <p class="text-xl text-gray-600 mt-4 font-medium">Nenhum evento futuro encontrado.</p>
         <p class="text-gray-500 mt-2">Que tal criar o primeiro evento?</p>
@@ -124,12 +124,11 @@ import { EventoResponseDTO, EventoPage } from '../../models/evento.model';
    
 })
 export class EventListComponent implements OnInit, OnDestroy {
-  // Ajustando o nome da variável para manter a consistência com o novo código
   events: EventoResponseDTO[] = []; 
   totalElements = 0;
   pageIndex = 0;
-  pageSize = 6; // Tamanho de página ajustado para um layout de cartões (3x2)
-  pageSizeOptions: number[] = [3, 6, 12, 24];
+  pageSize = 5;
+  pageSizeOptions: number[] = [5, 10, 15, 20];
   isLoading = false;
   errorMessage: string = '';
 
@@ -137,7 +136,8 @@ export class EventListComponent implements OnInit, OnDestroy {
 
   constructor(
     private eventoService: EventoService,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit(): void {
@@ -167,15 +167,18 @@ export class EventListComponent implements OnInit, OnDestroy {
 
           this.events = page.content;
           this.totalElements = page.totalElements;
-          // O MatPaginator já deve atualizar o pageIndex/pageSize no objeto 'e', mas atualizamos aqui o modelo
           this.pageIndex = page.number; 
           this.pageSize = page.size;
           this.isLoading = false;
+
+          // Força a detecção de mudanças
+          this.cdr.detectChanges();
         },
         error: (err) => {
           console.error('Erro ao carregar eventos:', err);
           this.errorMessage = 'Falha ao carregar eventos. Verifique a conexão com o backend (porta 8080).';
           this.isLoading = false;
+          this.cdr.detectChanges();
         }
       });
   }
@@ -184,8 +187,8 @@ export class EventListComponent implements OnInit, OnDestroy {
    * Lida com a mudança de página ou tamanho de página do MatPaginator.
    */
   handlePageEvent(e: PageEvent): void {
-    this.pageSize = e.pageSize;
     this.pageIndex = e.pageIndex;
+    this.pageSize = e.pageSize;
     this.loadEvents();
   }
 
@@ -211,6 +214,13 @@ export class EventListComponent implements OnInit, OnDestroy {
    * @param id ID do evento.
    */
   deleteEvent(id: number): void {
+
+    const confirmed = confirm('Tem certeza que deseja excluir este evento?');
+    
+    if (!confirmed) {
+      return;
+    }
+
     console.log(`[SOFT DELETE] Tentando excluir evento ID: ${id}.`);
 
     this.eventoService.deleteEvento(id)
@@ -224,6 +234,7 @@ export class EventListComponent implements OnInit, OnDestroy {
         error: (err) => {
           console.error(`[ERRO] Falha ao excluir evento ID: ${id}`, err);
           this.errorMessage = 'Falha na exclusão do evento. Tente novamente.';
+          this.cdr.detectChanges();
         }
       });
   }
