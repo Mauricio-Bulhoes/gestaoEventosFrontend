@@ -62,11 +62,14 @@ import { EventoResponseDTO, EventoPage } from '../../models/evento.model';
           </mat-card-content>
           
           <mat-card-actions class="flex justify-between items-center p-4 bg-gray-50 border-t">
+            <button mat-flat-button (click)="goToEdit(event.id)" class="my-custom-button-edit mr-2">
+              <mat-icon>edit</mat-icon> Editar
+            </button>
             <button mat-flat-button color="primary" (click)="goToDetails(event.id)" class="mr-2">
               <mat-icon>info</mat-icon> Ver Detalhes
             </button>
             <button mat-flat-button color="warn" (click)="deleteEvent(event.id)">
-                <mat-icon>delete</mat-icon> Excluir (Soft)
+                <mat-icon>delete</mat-icon> Excluir (Soft Delete)
             </button>
           </mat-card-actions>
         </mat-card>
@@ -103,6 +106,19 @@ import { EventoResponseDTO, EventoPage } from '../../models/evento.model';
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+    }
+    .my-custom-button-edit { background-color: #FFD700; }
+    
+    mat-card-actions button {
+      margin: 0 4px;
+    }
+    
+    mat-card-actions button:first-child {
+      margin-left: 0;
+    }
+    
+    mat-card-actions button:last-child {
+      margin-right: 0;
     }
   `],
    
@@ -179,6 +195,14 @@ export class EventListComponent implements OnInit, OnDestroy {
    */
   goToDetails(id: number): void {
     this.router.navigate(['/events', id]);
+  }
+
+  /**
+   * Navega para a página de edição do evento.
+   * @param id ID do evento.
+   */
+  goToEdit(id: number): void {
+    this.router.navigate(['/events', id, 'edit']);
   }
 
   /**
