@@ -1,0 +1,91 @@
+<div class="container mx-auto p-4">
+  
+  <mat-card class="mb-4">
+    <mat-card-header>
+      <mat-card-title>Lista de Eventos Cadastrados</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <p>Gerencie todos os eventos cadastrados na API.</p>
+    </mat-card-content>
+    <mat-card-actions>
+      <a mat-raised-button color="primary" routerLink="/events/new">
+        <mat-icon>add_circle</mat-icon> Novo Evento
+      </a>
+    </mat-card-actions>
+  </mat-card>
+
+  <!-- Feedback Visual: Spinner e Mensagens -->
+  <div *ngIf="isLoading" class="loading-container text-center py-8">
+    <mat-spinner class="mx-auto"></mat-spinner>
+    <p class="text-gray-600 mt-2">Carregando eventos...</p>
+  </div>
+
+  <div *ngIf="errorMessage" class="error-message p-4 bg-red-100 text-red-700 rounded-lg shadow">
+    <mat-icon>error</mat-icon> {{ errorMessage }}
+  </div>
+
+  <mat-card *ngIf="!isLoading && eventos.length === 0 && !errorMessage">
+    <mat-card-content class="text-center">
+      <mat-icon class="text-4xl text-gray-500">info</mat-icon>
+      <p class="mt-2">Nenhum evento encontrado. Crie um novo evento para começar.</p>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Tabela de Eventos -->
+  <div *ngIf="!isLoading && eventos.length > 0">
+    <div class="mat-elevation-z8 overflow-x-auto">
+        
+      <mat-table [dataSource]="eventos">
+
+        <!-- Coluna Título -->
+        <ng-container matColumnDef="titulo">
+          <mat-header-cell *matHeaderCellDef> Título </mat-header-cell>
+          <mat-cell *matCellDef="let evento"> {{ evento.titulo }} </mat-cell>
+        </ng-container>
+
+        <!-- Coluna Data/Hora -->
+        <ng-container matColumnDef="dataHora">
+          <mat-header-cell *matHeaderCellDef> Data/Hora </mat-header-cell>
+          <mat-cell *matCellDef="let evento"> {{ evento.dataHora | date: 'dd/MM/yyyy HH:mm' }} </mat-cell>
+        </ng-container>
+
+        <!-- Coluna Local -->
+        <ng-container matColumnDef="local">
+          <mat-header-cell *matHeaderCellDef> Local </mat-header-cell>
+          <mat-cell *matCellDef="let evento"> {{ evento.local }} </mat-cell>
+        </ng-container>
+
+        <!-- Coluna Ações -->
+        <ng-container matColumnDef="acoes">
+          <mat-header-cell *matHeaderCellDef> Ações </mat-header-cell>
+          <mat-cell *matCellDef="let evento">
+            <button mat-icon-button color="accent" [routerLink]="['/events', evento.id]" matTooltip="Detalhes">
+              <mat-icon>visibility</mat-icon>
+            </button>
+            <button mat-icon-button color="primary" [routerLink]="['/events', evento.id, 'edit']" matTooltip="Editar">
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button mat-icon-button color="warn" (click)="deleteEvent(evento.id)" matTooltip="Excluir (Soft Delete)">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </mat-cell>
+        </ng-container>
+
+        <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+        <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+      </mat-table>
+    </div>
+
+    <!-- Paginação (MatPaginator) -->
+    <mat-paginator 
+      [length]="totalElements" 
+      [pageSize]="pageSize" 
+      [pageSizeOptions]="[5, 10, 25, 100]" 
+      [pageIndex]="pageIndex"
+      (page)="handlePageChange($event)" 
+      aria-label="Selecione a página de eventos"
+      class="mt-4 shadow-md bg-white">
+    </mat-paginator>
+
+  </div>
+</div>
