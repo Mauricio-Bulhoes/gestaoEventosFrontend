@@ -1,11 +1,14 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatInputModule } from '@angular/material/input';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { Subject, takeUntil } from 'rxjs';
 
 import { EventoService } from '../../services/evento.service';
@@ -18,15 +21,32 @@ import { EventoResponseDTO, EventoPage } from '../../models/evento.model';
   imports: [
     CommonModule, 
     DatePipe, 
+    FormsModule, 
     MatPaginatorModule, 
     MatCardModule, 
     MatButtonModule, 
     MatIconModule, 
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule, 
+    MatInputModule, 
+    MatFormFieldModule
   ],
   template: `
     <div class="p-4 md:p-8 max-w-7xl mx-auto">
       <h1 class="text-3xl font-extrabold mb-8 text-indigo-800 border-b pb-2">Próximos Eventos</h1>
+
+      <!-- Campo de Busca por ID -->
+      <div class="mb-8 bg-white p-6 rounded-lg shadow-lg">
+        <div class="flex flex-col sm:flex-row items-end search-container">
+          <mat-form-field class="flex-1" appearance="outline">
+            <mat-label>Buscar evento por ID</mat-label>
+            <input matInput type="number" [(ngModel)]="searchId" placeholder="Digite o ID do evento" (keyup.enter)="searchEventById()">
+            <mat-icon matPrefix class="text-indigo-500">search</mat-icon>
+          </mat-form-field>
+          <button mat-raised-button color="primary" (click)="searchEventById()" class="h-14">
+            <mat-icon>search</mat-icon> Buscar
+          </button>
+        </div>
+      </div>
 
       <!-- Indicador de Carregamento -->
       <div *ngIf="isLoading" class="flex flex-col justify-center items-center py-12">
@@ -120,6 +140,10 @@ import { EventoResponseDTO, EventoPage } from '../../models/evento.model';
     mat-card-actions button:last-child {
       margin-right: 0;
     }
+    
+    .search-container button {
+      margin-left: 4px;
+    }
   `],
    
 })
@@ -131,6 +155,7 @@ export class EventListComponent implements OnInit, OnDestroy {
   pageSizeOptions: number[] = [5, 10, 15, 20];
   isLoading = false;
   errorMessage: string = '';
+  searchId: number | null = null;
 
   private destroy$ = new Subject<void>();
 
@@ -193,6 +218,24 @@ export class EventListComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Busca um evento específico por ID e navega para a página de detalhes.
+   */
+  searchEventById(): void {
+    if (this.searchId !== null && this.searchId > 0) {
+      this.goToDetails(this.searchId);
+    } else {
+      this.errorMessage = 'Por favor, digite um ID válido para buscar.';
+      this.cdr.detectChanges();
+      
+      // Limpa a mensagem de erro após 3 segundos
+      setTimeout(() => {
+        this.errorMessage = '';
+        this.cdr.detectChanges();
+      }, 3000);
+    }
+  }
+
+  /**
    * Navega para a página de detalhes do evento.
    * @param id ID do evento.
    */
@@ -210,7 +253,6 @@ export class EventListComponent implements OnInit, OnDestroy {
 
   /**
    * Realiza o Soft Delete do evento.
-   * Não usamos window.confirm/alert, apenas logamos a ação no console.
    * @param id ID do evento.
    */
   deleteEvent(id: number): void {
