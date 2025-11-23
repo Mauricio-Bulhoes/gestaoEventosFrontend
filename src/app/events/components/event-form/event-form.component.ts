@@ -61,17 +61,58 @@ export class EventFormComponent implements OnInit {
       })
     ).subscribe((evento: EventoResponseDTO | null) => {
       if (evento) {
+        // Converte a data do servidor para o horário local do usuário
+        const dataHoraLocal = this.convertToLocalDateTime(evento.dataHora);
+        
         // Preenche o formulário para edição. 
-        // Substring(0, 16) é crucial para formatar corretamente para o input type="datetime-local" (YYYY-MM-DDTHH:MM)
         this.eventForm.patchValue({
           titulo: evento.titulo,
           descricao: evento.descricao,
-          dataHora: evento.dataHora.substring(0, 16), 
+          dataHora: dataHoraLocal, 
           local: evento.local
         });
       }
       this.isLoading = false;
     });
+  }
+
+  /**
+   * Converte a data ISO do servidor para o formato datetime-local
+   * mantendo o horário local do usuário
+   */
+  private convertToLocalDateTime(isoString: string): string {
+    const date = new Date(isoString);
+    // Formata no formato YYYY-MM-DDTHH:mm para o input datetime-local
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  }
+  
+  /**
+   * Converte a data local para ISO mantendo o horário escolhido pelo usuário
+   */
+  private convertToISOWithoutTimeShift(localDateTime: string): string {
+    // Extrai os componentes da data local
+    const [datePart, timePart] = localDateTime.split('T');
+    const [year, month, day] = datePart.split('-').map(Number);
+    const [hours, minutes] = timePart.split(':').map(Number);
+    
+    // Cria uma data com os valores exatos (sem conversão de fuso)
+    const date = new Date(year, month - 1, day, hours, minutes, 0);
+    
+    // Formata manualmente para ISO 8601
+    const isoYear = date.getFullYear();
+    const isoMonth = String(date.getMonth() + 1).padStart(2, '0');
+    const isoDay = String(date.getDate()).padStart(2, '0');
+    const isoHours = String(date.getHours()).padStart(2, '0');
+    const isoMinutes = String(date.getMinutes()).padStart(2, '0');
+    const isoSeconds = String(date.getSeconds()).padStart(2, '0');
+    
+    return `${isoYear}-${isoMonth}-${isoDay}T${isoHours}:${isoMinutes}:${isoSeconds}`;
   }
   
   // Validador Estático Customizado (pode ser usado diretamente na definição do formGroup)
@@ -90,11 +131,13 @@ export class EventFormComponent implements OnInit {
   // Gera a data e hora mínima no formato YYYY-MM-DDTHH:MM para o atributo [min] do input
   private getMinDateTime(): string {
     const now = new Date();
-    // Ajusta o fuso horário para garantir que seja o horário local
-    const offset = now.getTimezoneOffset() * 60000;
-    const localNow = new Date(now.getTime() - offset);
-    // Retorna a string no formato YYYY-MM-DDTHH:MM
-    return localNow.toISOString().slice(0, 16);
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
   }
 
   onSubmit(): void {
@@ -107,10 +150,10 @@ export class EventFormComponent implements OnInit {
     this.isLoading = true;
     const formValue = this.eventForm.value;
     
-    // Converte a data e hora para o formato ISO 8601 completo (necessário para o LocalDateTime do Spring)
+    // Converte mantendo o horário local escolhido pelo usuário
     const requestDto: EventoRequestDTO = {
         ...formValue,
-        dataHora: new Date(formValue.dataHora).toISOString()
+        dataHora: this.convertToISOWithoutTimeShift(formValue.dataHora)
     };
 
     let operation: Observable<EventoResponseDTO>;
